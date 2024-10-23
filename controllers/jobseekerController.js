@@ -1,0 +1,163 @@
+// /controllers/jobseekerController.js
+
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
+import JobSeeker from '../models/jobseekerModel.js'
+import multer from 'multer';
+import path from 'path';
+import dotenv from 'dotenv';
+
+dotenv.config();
+
+// Set up multer for photo uploads
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, 'uploads/');
+  },
+  filename: (req, file, cb) => {
+    cb(null, Date.now() + path.extname(file.originalname));
+  },
+});
+
+const upload = multer({ storage });
+
+// Register a new job seeker
+export const registerJobSeeker = async (req, res) => {
+  const { firstName, lastName, middleName, contactNumber, email, password } = req.body;
+
+  try {
+    const existingJobSeeker = await JobSeeker.findOne({ where: { email } });
+    if (existingJobSeeker) {
+      return res.status(400).json({ message: 'Email already exists' });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const newJobSeeker = await JobSeeker.create({
+      firstName,
+      lastName,
+      middleName,
+      contactNumber,
+      email,
+      password: hashedPassword,
+      photo: req.file ? req.file.filename : null,
+    });
+
+    const token = jwt.sign({ userId: newJobSeeker.id }, process.env.JWT_SECRET, {
+      expiresIn: '1h',
+    });
+
+    res.status(201).json({
+      message: 'Job Seeker registered successfully',
+      token,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+export const getAllJobSeekers = async (req, res) => {
+    try {
+      const jobSeekers = await JobSeeker.findAll();
+      res.status(200).json(jobSeekers);
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  };
+
+
+
+  export const getJobSeekerById = async (req, res) => {
+    const { id } = req.params;
+  
+    try {
+      const jobSeeker = await JobSeeker.findByPk(id);
+      if (!jobSeeker) {
+        return res.status(404).json({ message: 'Job seeker not found' });
+      }
+      res.status(200).json(jobSeeker);
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  };
+
+  export const updateJobSeeker = async (req, res) => {
+    const { id } = req.params;
+    const { firstName, lastName, middleName, contactNumber, email, photo } = req.body;
+  
+    try {
+      const jobSeeker = await JobSeeker.findByPk(id);
+      if (!jobSeeker) {
+        return res.status(404).json({ message: 'Job seeker not found' });
+      }
+  
+      // Update job seeker details
+      jobSeeker.firstName = firstName;
+      jobSeeker.lastName = lastName;
+      jobSeeker.middleName = middleName;
+      jobSeeker.contactNumber = contactNumber;
+      jobSeeker.email = email;
+      jobSeeker.photo = photo;
+  
+      await jobSeeker.save();
+      res.status(200).json(jobSeeker);
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  };
+  
+  // DELETE a job seeker by ID
+  export const deleteJobSeeker = async (req, res) => {
+    const { id } = req.params;
+  
+    try {
+      const jobSeeker = await JobSeeker.findByPk(id);
+      if (!jobSeeker) {
+        return res.status(404).json({ message: 'Job seeker not found' });
+      }
+  
+      await jobSeeker.destroy();
+      res.status(204).send(); // No content
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  };
+           
+
+
+
+      //login
+  export const loginJobSeeker = async (req, res) => {
+    const { email, password } = req.body;
+  
+    try {
+      
+      const jobSeeker = await JobSeeker.findOne({ where: { email } });
+      if (!jobSeeker) {
+        return res.status(404).json({ message: 'Job seeker not found' });
+      }
+  
+    
+      const isPasswordValid = await bcrypt.compare(password, jobSeeker.password);
+      if (!isPasswordValid) {
+        return res.status(401).json({ message: 'Invalid password' });
+      }
+      
+      const token = jwt.sign(
+        { id: jobSeeker.id, email: jobSeeker.email },
+        process.env.JWT_SECRET || 'your_jwt_secret_key',
+        { expiresIn: '1h' }
+      );
+  
+   
+      res.status(200).json({
+        message: 'Login successful',
+        token,
+      });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  };
+
+export const uploadPhoto = upload.single('photo');

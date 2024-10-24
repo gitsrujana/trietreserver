@@ -7,6 +7,8 @@ import jobseekerRoutes from './routes/jobseekerRoutes.js';
 import path from 'path';
 import dotenv from 'dotenv';
 import jobseekerPersonalDetailsRoutes from './routes/jobSeekerPersonalDetailsRoutes.js';
+import jobseekerProfessionalDetailsRoutes from './routes/jobseekerProfessionalDetailsRoutes.js'
+
 dotenv.config();
 
 const app = express();
@@ -18,7 +20,7 @@ app.use('/uploads', express.static(path.join('uploads')));
 // Routes
 app.use('/v1/api/jobseekers', jobseekerRoutes);
 app.use('/v1/api/personal-details', jobseekerPersonalDetailsRoutes);
-
+app.use('/v1/api/professional-details', jobseekerProfessionalDetailsRoutes);
 // Sync database
 sequelize.sync({ alter: true })
   .then(() => console.log('Database connected'))

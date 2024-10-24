@@ -1,8 +1,23 @@
-// controllers/jobSeekerPersonalDetailsController.js
+
 import JobSeekerPersonalDetails from '../models/JobSeekerPersonalDetails.js';
 
-// Add Personal Details
+import Joi from 'joi'; 
+
+
+const personalDetailsSchema = Joi.object({
+  dateOfBirth: Joi.date().iso().required(), // ISO format YYYY-MM-DD
+  gender: Joi.string().valid('Male', 'Female', 'Other').required(),
+  nationality: Joi.string().required(),
+  languagePreference: Joi.string().required(),
+  disabilityOrHealthCondition: Joi.string().allow('').optional(), // Optional field
+});
 export const addPersonalDetails = async (req, res) => {
+  const { error } = personalDetailsSchema.validate(req.body); // Validate request body
+
+  if (error) {
+    return res.status(400).json({ message: error.details[0].message });
+  }
+
   try {
     const { dateOfBirth, gender, nationality, languagePreference, disabilityOrHealthCondition } = req.body;
 

@@ -6,7 +6,7 @@ import JobSeeker from '../models/jobseekerModel.js'
 import multer from 'multer';
 import path from 'path';
 import dotenv from 'dotenv';
-
+import Joi from 'joi';
 dotenv.config();
 
 // Set up multer for photo uploads
@@ -21,8 +21,29 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
+
+const registrationSchema = Joi.object({
+  firstName: Joi.string().min(1).required(),
+  lastName: Joi.string().min(1).required(),
+  middleName: Joi.string().allow('').optional(),
+  contactNumber: Joi.string().pattern(/^[0-9]{10}$/).required(), // Adjust regex as needed
+  email: Joi.string().email().required(),
+  password: Joi.string().min(6).required(),
+});
+
+// Validation schema for login
+const loginSchema = Joi.object({
+  email: Joi.string().email().required(),
+  password: Joi.string().min(6).required(),
+});
 // Register a new job seeker
 export const registerJobSeeker = async (req, res) => {
+  const { error } = registrationSchema.validate(req.body); // Validate request body
+
+  if (error) {
+    return res.status(400).json({ message: error.details[0].message });
+  }
+
   const { firstName, lastName, middleName, contactNumber, email, password } = req.body;
 
   try {
@@ -129,6 +150,13 @@ export const getAllJobSeekers = async (req, res) => {
 
       //login
   export const loginJobSeeker = async (req, res) => {
+
+
+    const { error } = loginSchema.validate(req.body); // Validate request body
+
+    if (error) {
+      return res.status(400).json({ message: error.details[0].message });
+    }
     const { email, password } = req.body;
   
     try {
